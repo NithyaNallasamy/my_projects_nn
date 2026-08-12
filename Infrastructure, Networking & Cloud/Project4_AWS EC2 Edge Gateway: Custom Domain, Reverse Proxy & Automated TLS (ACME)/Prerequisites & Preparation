@@ -1,0 +1,22 @@
+Before obtaining an SSL certificate, ensure:
+
+Before obtaining an SSL certificate, ensure:
+
+Domain Name: You need a registered domain name (or a free DNS hostname like DuckDNS or No-IP) pointing to your EC2 public IP.
+
+
+AWS Security Group Rules: In your AWS EC2 Console, ensure both Port 80 (HTTP) and Port 443 (HTTPS) are open to the world (0.0.0.0/0).
+
+
+Host Firewall (UFW): Open ports 80 and 443 on your server:
+
+sudo ufw allow 80/tcp comment 'HTTP Web Ingress'
+sudo ufw allow 443/tcp comment 'HTTPS Encrypted Ingress'
+sudo ufw reload
+
+
+
+
+
+
+
