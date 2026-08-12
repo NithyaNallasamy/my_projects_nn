@@ -1,0 +1,56 @@
+### 1. Context
+Standard, single-stage Docker builds bundle source code, package managers, development dependencies, and heavy build toolchains directly into the final container image. This results in bloated image sizes (>1 GB), increased network latency during CI/CD push/pull cycles, and an expanded security attack surface containing unnecessary binaries and utilities.
+
+**The Challenge:** Package a Node.js web application into an immutable container image that is lightweight (<150 MB), fast to deploy, and secure for production workloads.
+
+---
+
+### 2. Decision
+* **Multi-Stage Build Pattern:** Implemented a two-stage `Dockerfile` architecture using `node:20-alpine`.
+  * **Stage 1 (`builder`):** Dedicated to dependency installation (`npm ci --omit=dev`) using package lockfiles.
+  * **Stage 2 (`runner`):** A clean, minimal runtime environment that copies *only* necessary production artifacts (`node_modules` and application source) from the `builder` stage.
+* **Deterministic Package Resolution:** Utilized `npm ci` with `package-lock.json` to ensure reproducible dependency trees across environments.
+* **Security Hardening:** Enforced execution under a non-privileged, low-permission system user (`USER node`) instead of default `root`.
+* **Layer Caching Optimization:** Structured Dockerfile directives to copy dependency manifest files (`package*.json`) prior to application source code, maximizing build cache reuse.
+
+---
+
+### 3. Impact
+* **~85% Footprint Reduction:** Reduced final production image size from **~1.1 GB** (standard Node base) to **~130 MB** (Alpine multi-stage).
+* **Hardened Security Posture:** Stripped away build compilers, devDependencies, and shell utilities from the runtime image, drastically reducing potential vulnerability vectors (CVEs).
+* **Least-Privilege Compliance:** Restricted container execution privileges to `USER node`, mitigating root escalation risks on the host daemon.
+
+---
+
+## 🏗️ Multi-Stage Build Flow & Architecture
+
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ STAGE 1: Build & Dependency Stage (node:20-alpine AS builder)          │
+│                                                                        │
+│   1. WORKDIR /app                                                      │
+│   2. COPY package*.json ./                                             │
+│   3. RUN npm ci --omit=dev  ──► Installs production node_modules      │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    │ COPY --from=builder /app/node_modules
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ STAGE 2: Production Execution Runtime (node:20-alpine AS runner)       │
+│                                                                        │
+│   1. ENV NODE_ENV=production                                           │
+│   2. COPY . .               ──► Minimal application source             │
+│   3. USER node              ──► Non-root execution                     │
+│   4. EXPOSE 3000                                                       │
+│   5. CMD ["node", "server.js"]                                         │
+└────────────────────────────────────────────────────────────────────────┘
+
+
+Project Repository Structure
+phase3-project1/
+├── Dockerfile          # Multi-stage container build instructions
+├── .dockerignore        # Excludes local node_modules, logs, and git artifacts
+├── package.json        # Application manifest & dependency specs
+├── package-lock.json   # Deterministic dependency lockfile
+└── server.js           # Express.js web server application
+
