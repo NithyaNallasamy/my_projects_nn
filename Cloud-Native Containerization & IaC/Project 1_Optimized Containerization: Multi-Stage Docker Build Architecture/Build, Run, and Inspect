@@ -1,0 +1,36 @@
+Now build and run your multi-stage container locally:
+
+# 1. Build the Docker image
+docker build -t devops-app:v1 .
+
+# 2. Run container in detached mode mapping port 3000
+docker run -d -p 3000:3000 --name web-app devops-app:v1
+
+# 3. Test endpoint locally via curl
+curl http://localhost:3000
+
+Check Your Container & Image Footprint:
+
+# Check running containers
+docker ps
+
+# Inspect image size
+docker images devops-app:v1
+
+CONTAINER ID   IMAGE           COMMAND                  CREATED          STATUS          PORTS                                         NAMES
+6f37b8afde80   devops-app:v1   "docker-entrypoint.s…"   42 minutes ago   Up 42 minutes   0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp   web-app
+
+
+
+#Security & Best Practices Implemented
+Non-Root User: Switched runtime process user from root to node (USER node) to prevent privilege escalation vulnerabilities.
+
+Alpine Base Image: Utilized node:20-alpine to maintain a ultra-minimal OS footprint with fewer installed system packages.
+
+Layer Caching Optimization: Structured COPY package*.json ./ prior to application code so npm ci layer is cached unless dependencies change.
+
+Environment Isolation: Explicitly set ENV NODE_ENV=production to trigger production optimizations in Express and dependency modules.
+
+Clean .dockerignore: Excluded .git, node_modules, npm-debug.log, and environment files from being copied into the build context.
+
+
