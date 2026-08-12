@@ -1,0 +1,66 @@
+Step 1: Firewall & Security Group Preparation
+Ensure both Port 80 (HTTP) and Port 443 (HTTPS) are open in the AWS EC2 Security Group (0.0.0.0/0)
+and the Linux host UFW firewall:
+
+# Allow HTTP and HTTPS traffic through host firewall
+sudo ufw allow 80/tcp comment 'HTTP Web Ingress'
+sudo ufw allow 443/tcp comment 'HTTPS Encrypted Ingress'
+sudo ufw reload
+
+Step 2: Configure Public DNS A Record
+Navigate to your Domain Registrar or DNS Manager (Route53, Cloudflare, Namecheap, DuckDNS, No-IP) 
+and map your domain to your EC2 instance's Public IP:
+
+Record Type         | Host / Name                             | Target / Value                                                        | TTL          |
+|---------------------|-----------------------------------------|-----------------------------------------------------------------------|--------------|
+| A                   | @ (or app)                              | <YOUR_EC2_PUBLIC_IP>                                                  | 300 (5 mins) |
+
+Verify DNS Propagation
+Run dig or nslookup from your local terminal to confirm your domain points to your EC2 IP address:
+
+##Proceed once the query returns your server's public IP!
+
+Step 3: Update Nginx Virtual Host Configuration
+Connect to your server via SSH and update /etc/nginx/sites-available/load-balancer to replace generic wildcards with your domain name:
+
+sudo nano /etc/nginx/sites-available/load-balancer
+
+server {
+    listen 80;
+    listen [::]:80;
+
+    # Explicit domain target for ACME validation
+    server_name mytestsever.myftp.biz;
+
+    location / {
+        proxy_pass http://node_backend_pool;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+Verify syntax and reload Nginx:
+
+sudo nginx -t && sudo systemctl reload nginx
+
+
+Step 4: Install Certbot & Trigger ACME Automation
+Install Certbot along with its dedicated Nginx integration module:
+
+# Install Certbot & Nginx plugin
+sudo apt update && sudo apt install -y certbot python3-certbot-nginx
+
+# Execute automated certificate issuance & Nginx configuration
+sudo certbot --nginx -d app.yourdomain.com
+
+During the Interactive Setup:
+
+Email Prompt: Provide a sysadmin email address for urgent renewal/security alerts.
+
+
+Terms of Service: Agree to the Let's Encrypt Terms (Y).
+
+
+HTTPS Redirect: Select Option 2 to force all plain HTTP (Port 80) traffic to redirect to HTTPS (Port 443) automatically.
