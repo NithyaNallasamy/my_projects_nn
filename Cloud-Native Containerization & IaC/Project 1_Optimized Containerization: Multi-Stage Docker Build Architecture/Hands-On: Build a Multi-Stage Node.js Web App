@@ -1,0 +1,113 @@
+Let's set up a clean workspace and create our application files:
+
+# 1. Create project directory
+mkdir -p ~/phase3-project1 && cd ~/phase3-project1
+
+File 1: Create package.json
+
+cat <<'EOF' > package.json
+{
+  "name": "devops-multi-stage-app",
+  "version": "1.0.0",
+  "description": "Phase 3 Project 1 - Multi-Stage Container",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
+EOF
+
+File 2: Create server.js
+
+cat <<'EOF' > server.js
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.send(`
+    <div style="font-family: sans-serif; text-align: center; padding: 4rem; background: #090d16; color: #38bdf8;">
+      <h1>🐳 Phase 3, Project 1 Complete!</h1>
+      <p>Running inside an optimized, multi-stage <strong>Docker Container</strong>.</p>
+    </div>
+  `);
+});
+
+app.listen(PORT, () => {
+  console.log(`Application listening on port ${PORT}`);
+});
+EOF
+
+File 3: Create the Multi-Stage Dockerfile
+
+cat <<'EOF' > Dockerfile
+# ==========================================
+# STAGE 1: Build & Dependency Stage
+# ==========================================
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy dependency declarations
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --only=production
+
+# ==========================================
+# STAGE 2: Lightweight Production Runtime
+# ==========================================
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy cached node_modules from builder stage
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy app source code
+COPY . .
+
+# Security: Run as non-root user
+USER node
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]
+EOF
+
+File 4: Create .dockerignore in Your Terminal
+Run this command inside your project directory (~/phase3-project1):
+
+cd ~/phase3-project1
+
+cat << 'EOF' > .dockerignore
+# Dependency directories (Docker installs these inside the container)
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Git repository metadata
+.git
+.gitignore
+
+# Environment files and sensitive secrets
+.env
+.env.local
+.env.*.local
+
+# Documentation & IDE configurations
+README.md
+.vscode
+.idea
+
+# OS generated files
+.DS_Store
+Thumbs.db
+EOF
+
