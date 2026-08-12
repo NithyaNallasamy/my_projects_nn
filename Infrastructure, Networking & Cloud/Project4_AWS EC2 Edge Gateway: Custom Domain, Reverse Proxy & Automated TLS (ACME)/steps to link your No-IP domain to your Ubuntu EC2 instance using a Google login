@@ -1,0 +1,28 @@
+1. Secure an AWS Elastic IP
+Go to EC2 Console > Elastic IPs > Allocate.
+Choose Actions > Associate to attach it permanently to your running instance to avoid IP changes.
+
+2. Generate a DDNS Key on No-IP
+Log into No-IP with your Google account.
+Go to Dynamic DNS > DDNS Keys (or DNS Records), 
+click Generate DDNS Key, and copy the unique Username and Password provided.
+
+3. Install and Configure ddclient on Ubuntu
+Connect to your EC2 instance via SSH and run:
+sudo apt update && sudo apt install -y ddclient
+
+Open the config file (sudo nano /etc/ddclient.conf), clear it, and paste this block using
+your DDNS key details:
+
+ssl=yes
+protocol=noip
+use=web, web=ipify-ipv4
+server=://no-ip.com
+login=YOUR_DDNS_KEY_USERNAME
+password=YOUR_DDNS_KEY_PASSWORD
+mytestsever.myftp.biz
+
+4. Enable and Start the ServiceConfigure the client to run continuously in the background and start it:
+sudo sed -i 's/run_daemon="false"/run_daemon="true"/' /etc/default/ddclient
+sudo systemctl restart ddclient && sudo systemctl enable ddclient
+
