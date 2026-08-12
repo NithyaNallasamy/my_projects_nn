@@ -1,0 +1,39 @@
+1. Test Automated Certificate Renewal
+
+Let's Encrypt certificates carry a 90-day lifespan. Certbot installs a certbot.timer systemd service 
+to automate renewals twice daily. Verify the dry-run execution:
+
+sudo certbot renew --dry-run
+
+Expected Output:
+
+Processing /etc/letencrypt/renewal/app.yourdomain.com.conf
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Account registered.
+Simulating renewal of an existing certificate for app.yourdomain.com
+Congratulations, all simulated renewals succeeded!
+
+2. Verify HTTP-to-HTTPS Redirection via curl
+Execute a HEAD request against the plain HTTP endpoint to confirm the 301 Moved Permanently response:
+
+curl -I http://app.yourdomain.com
+
+Expected Output:
+
+ curl -I http://app.yourdomain.com
+HTTP/1.1 301 Moved Permanently
+Date: Mon, 10 Aug 2026 08:54:03 GMT
+Content-Type: text/html
+Content-Length: 166
+Connection: keep-alive
+X-Sucuri-ID: 20002
+X-XSS-Protection: 1; mode=block
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+Location: https://app.yourdomain.com/
+Server: Sucuri/Cloudproxy
+Alt-Svc: h3=":443"; ma=86400
+
+
+3. Encrypted Ingress Test
+Navigate to https://app.yourdomain.com in your web browser. Confirm the presence of the green connection padlock 🔒 indicating active TLS 1.2/1.3 transport encryption.
