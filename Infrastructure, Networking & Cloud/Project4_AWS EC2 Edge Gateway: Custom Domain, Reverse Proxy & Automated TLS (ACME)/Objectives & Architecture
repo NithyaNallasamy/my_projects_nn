@@ -1,0 +1,53 @@
+Here is the flow of the secure routing layer we are setting up:
+
+[ Public Client Browser ]
+                                           │
+                                           │ 1. HTTPS Request (Port 443)
+                                           ▼
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ AWS EC2 Host Edge Gateway                                                        │
+│                                                                                  │
+│   ┌────────────────────────┐  Encrypted (TLS 1.2/1.3)  ┌────────────────────────┐  │
+│   │  HTTP Ingress (Port 80)│ ───────────────────────►│ HTTPS Gateway(Port 443)│  │
+│   │   (301 Redirect)       │                         │ (TLS Edge Termination) │  │
+│   └────────────────────────┘                         └───────────┬────────────┘  │
+│                                                                  │               │
+│                                           Upstream Load Balancing│               │
+│                                                                  ▼               │
+│                                                     ┌─────────────────────────┐  │
+│                                                     │  Node.js App Pool       │  │
+│                                                     │  (Port 3001 / 3002)     │  │
+│                                                     └─────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+
+How the ACME HTTP-01 Validation Challenge Works
+The ACME Protocol automates domain ownership validation without manual email or DNS verification:
+
+
+Challenge Trigger: Certbot requests an SSL certificate for app.yourdomain.com from the Let's Encrypt ACME server.
+
+
+Token Provisioning: Let's Encrypt responds with a cryptographic challenge token.
+
+
+Local File Placement: Certbot places the token file in the Nginx web directory at /.well-known/acme-challenge/<TOKEN>.
+
+
+Public Verification: Let's Encrypt sends an HTTP query to http://app.yourdomain.com/.well-known/acme-challenge/<TOKEN>.
+
+
+Certificate Signing: Once the ACME server reads the token, domain control is proven, and signed TLS keys are delivered to the host.
+
+
+# Key Takeaways You Will Gain:
+
+DNS Management: Mapping public domain names to cloud IPs via A records and verifying propagation using diagnostic tools (dig, nslookup).
+
+TLS/SSL Termination: Configuring Nginx to decrypt incoming HTTPS requests at the edge, relieving backend Node.js apps from handling heavy cryptographic handshakes.
+
+
+Automated Certificate Lifecycle: Deploying certbot to automatically issue, configure, and renew Let's Encrypt certificates.
+
+
+Security Enforcement: Applying HTTP Strict Transport Security (HSTS) and automatic 301 Moved Permanently redirects from HTTP (80) to HTTPS (443).
