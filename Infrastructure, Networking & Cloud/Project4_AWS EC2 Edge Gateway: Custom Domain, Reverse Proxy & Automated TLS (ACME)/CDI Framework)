@@ -1,0 +1,27 @@
+Custom Domain & SSL/TLS Encryption
+Context: Public-facing web endpoints transmitting credentials and application payload data over unencrypted HTTP (Port 80) exposed client traffic to packet sniffing, man-in-the-middle (MitM) attacks, and browser security warnings.
+The constraint was to implement domain mapping and end-to-end transport layer security (TLS/SSL) without introducing recurring SSL licensing fees or requiring manual certificate management.
+
+
+Decision: Selected Let's Encrypt ACME authority paired with Certbot for automated domain validation and SSL certificate lifecycle management.
+Configured Nginx as the TLS termination point , explicitly enabling HTTP/2 protocol support, HSTS headers, and an automatic 301 Moved Permanently redirect from HTTP (Port 80) to HTTPS (Port 443).
+
+Impact:
+
+100% Transport Security: Encrypted 100% of external web traffic via TLS 1.2/1.3, mitigating MitM vulnerability vectors.
+
+
+Zero Licensing Overhead: Eliminated commercial SSL certificate costs ($100–$300/year) by utilizing Let's Encrypt ACME automation.
+
+Zero-Touch Maintenance: Automated certificate renewals via certbot.timer, reducing certificate expiration outage risks to 0%.
+
+#details to note
+
+Let's Encrypt: A non-profit, free, and automated Certificate Authority (CA) that issues digital SSL/TLS certificates. Traditionally, SSL certificates cost $100–$300/year and required manual validation. Let's Encrypt provides them for free.
+
+
+ACME Protocol (Automated Certificate Management Environment): The automated communications protocol that proves to Let's Encrypt that you actually own and control the server at your domain name.
+
+
+Certbot: The official command-line software client installed on your server. It talks to the Let's Encrypt ACME server, completes the domain validation challenge, downloads the SSL keys, reconfigures Nginx automatically, and handles background auto-renewals.
+
