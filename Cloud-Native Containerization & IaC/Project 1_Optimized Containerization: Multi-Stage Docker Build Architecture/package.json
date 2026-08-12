@@ -1,0 +1,12 @@
+{
+  "name": "devops-multi-stage-app",
+  "version": "1.0.0",
+  "description": "Phase 3 Project 1 - Multi-Stage Container",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
