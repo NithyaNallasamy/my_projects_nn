@@ -1,0 +1,13 @@
+{
+  "name": "devops-multi-container-app",
+  "version": "1.0.0",
+  "description": "Phase 3 Project 2 - Docker Compose Multi-Container Application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "redis": "^4.6.13"
+  }
+}
