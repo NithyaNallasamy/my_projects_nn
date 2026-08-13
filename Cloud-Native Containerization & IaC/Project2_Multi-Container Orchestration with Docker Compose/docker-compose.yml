@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # 1. Node.js Web Application Service
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: compose-web-app
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - REDIS_HOST=redis-db
+      - REDIS_PORT=6379
+    depends_on:
+      redis-db:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: always
+
+  # 2. Redis Cache / Database Service
+  redis-db:
+    image: redis:7-alpine
+    container_name: compose-redis-db
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: always
+
+# Persistent Volume for Redis Data
+volumes:
+  redis-data:
+
+# Custom Isolated Bridge Network
+networks:
+  app-network:
+    driver: bridge
