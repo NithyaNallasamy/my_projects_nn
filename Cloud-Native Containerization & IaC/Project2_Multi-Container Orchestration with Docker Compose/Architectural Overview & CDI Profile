@@ -1,0 +1,55 @@
+
+## 📋 Architectural Overview & CDI Profile
+
+### 1. Context
+Microservices architectures rely on decoupled components (web runtimes, caching layers, database instances) operating independently. Managing these services using ad-hoc `docker run` scripts leads to fragile networking, race conditions during startup, and unmanageable environment state across development and staging environments.
+
+**The Challenge:** Orchestrate a multi-tier microservice application (Node.js web app + Redis database) into an isolated internal Docker bridge network with zero manual IP configuration, automated health monitoring, and persistent data storage.
+
+---
+
+### 2. Decision
+* **Declarative Orchestration:** Standardized service lifecycle management using `docker-compose.yml` (Compose Specification 3.8).
+* **Service Discovery & Networking:** Attached services to a custom Docker bridge network (`app-network`). Services communicate via DNS service names (`redis-db`) rather than dynamic container IP addresses.
+* **Deterministic Service Startup (`depends_on` + Healthcheck):** Enforced startup order so the `web` container delays initialization until the `redis-db` service reports a `healthy` status via native `redis-cli ping`.
+* **State Persistence:** Attached a Docker named volume (`redis-data`) to `/data` in the Redis container to preserve state across container restarts and rebuilds.
+
+---
+
+### 3. Impact
+* **Zero-Configuration Inter-Service Networking:** Decoupled container IP addressing using internal DNS resolution (`redis-db:6379`).
+* **Resilient Startup & Recovery:** Eliminates race conditions during startup using container health probes (`redis-cli ping`).
+* **Persistent Data Retention:** Visits counter state persists reliably across `docker compose down` and system reboots.
+
+---
+
+## 🏗️ Multi-Container Architecture Flow
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│                        HOST SYSTEM (0.0.0.0)                           │
+│                                                                        │
+│   Incoming Traffic ──► Port 3000                                       │
+└──────────────────────────┬─────────────────────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                   DOCKER ISOLATED BRIDGE NETWORK                       │
+│                           (app-network)                                │
+│                                                                        │
+│  ┌─────────────────────────────┐     DNS Name: redis-db                │
+│  │  compose-web-app            │     Port: 6379                        │
+│  │  (Node.js / Express)        ├────────────────────────┐              │
+│  │                             │                        │              │
+│  └─────────────────────────────┘                        ▼              │
+│                                           ┌─────────────────────────┐  │
+│                                           │  compose-redis-db       │  │
+│                                           │  (Redis Cache / DB)     │  │
+│                                           └────────────┬────────────┘  │
+│                                                        │               │
+└────────────────────────────────────────────────────────┼───────────────┘
+                                                         ▼
+                                            ┌─────────────────────────┐
+                                            │ Named Volume            │
+                                            │ (redis-data)            │
+                                            └─────────────────────────┘

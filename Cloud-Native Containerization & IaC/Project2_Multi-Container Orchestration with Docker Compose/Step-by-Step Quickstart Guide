@@ -1,0 +1,17 @@
+1. Build and Run the Stack
+Spin up all microservices in detached mode:
+
+docker compose up -d --build
+
+2. Inspect Container Status and Health
+Verify that both services are running and redis-db reports (healthy) status:
+
+docker compose ps
+
+3. Test Service Ingress and Page Counter
+Execute curl to send traffic to the Node.js service and trigger Redis counters:
+
+curl http://localhost:3000
+curl http://localhost:3000
+curl http://localhost:3000
+
