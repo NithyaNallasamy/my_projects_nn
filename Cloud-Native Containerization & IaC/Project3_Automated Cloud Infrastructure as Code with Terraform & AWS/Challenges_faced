@@ -1,0 +1,29 @@
+1. Ingress Port Mapping Mismatch (80:3000 vs 80:80)
+Challenge: During initial curl http://<EC2_PUBLIC_IP> testing, the connection was rejected with curl: (7) Couldn't connect to server. The security group allowed inbound HTTP traffic on port 80, but the container bootstrap command was mapped to internal container port 3000 (-p 80:3000), whereas standard official Nginx listens on port 80.
+
+Resolution: Corrected the container port binding inside main.tf to -p 80:80.
+
+Takeaway: Always verify the container's internal listening port when configuring host-to-container port publishing.
+
+2. EC2 user_data Execution Lifecycle & Non-Destructive In-Place Updates
+Challenge: Updating user_data inside main.tf and re-running terraform apply did not fix the running container because AWS EC2 executes user_data (cloud-init) only once during the initial instance boot.
+
+Resolution: Forced Terraform to replace and recreate the compute resource to trigger a fresh cloud-init lifecycle using:
+
+Bash
+terraform apply -replace="aws_instance.web_server" -auto-approve
+Takeaway: In production IaC, immutable infrastructure practices (replacing instances or updating Launch Templates/Auto Scaling Groups) ensure bootstrap scripts execute deterministically without configuration drift.
+
+3. Dynamic Cryptographic SSH Key Management without AWS Console Dependency
+Challenge: Creating an EC2 instance without an assigned key pair locks out direct OS-level administrative access and debugging. Conversely, manually creating key pairs in the AWS Console creates manual dependencies outside version control.
+
+Resolution: Implemented hashicorp/tls (tls_private_key) to dynamically generate an RSA 4096-bit key pair in Terraform memory, exported the private key to a local .pem file with strict POSIX permissions (0400) via local_file, and registered the public key with aws_key_pair.
+
+Takeaway: Automated end-to-end credential provisioning within the IaC pipeline while keeping the workflow 100% code-driven.
+
+4. Preventing Sensitive State & Secret Leakage in Source Control
+Challenge: Generating private keys locally (ec2-key.pem) and tracking provisioned resources in terraform.tfstate exposes sensitive credentials, internal IPs, and cryptographic keys to Git history if committed.
+
+Resolution: Configured a strict .gitignore to explicitly exclude .pem, .key, *.tfstate, and .terraform/ directories prior to staging and pushing to GitHub.
+
+Takeaway: Enforced DevSecOps hygiene by ensuring sensitive state and secrets remain excluded from public version control.

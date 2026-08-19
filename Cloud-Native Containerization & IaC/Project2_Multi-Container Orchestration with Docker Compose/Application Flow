@@ -1,0 +1,78 @@
+The application operates across two distinct phases:
+
+Startup & Dependency Initialization Flow (How the system boots up cleanly)
+
+Runtime Data Request Flow (What happens when a user visits http://localhost:3000)
+
+1. Startup & Dependency Initialization Flow
+When you execute docker compose up -d, Docker Compose doesn't just launch containers randomly. It executes a strictly ordered sequence based on service dependencies and health checks.
+
+Step 1: Network & Volume Creation
+   │  ├── Docker creates the custom bridge network: 'app-network'
+   │  └── Docker provisions the persistent named volume: 'redis-data'
+   ▼
+Step 2: Database Container Launch (compose-redis-db)
+   │  ├── Starts the redis:7-alpine image
+   │  ├── Mounts 'redis-data' volume to container path '/data'
+   │  └── Triggers periodic Healthcheck: "redis-cli ping" every 5s
+   ▼
+Step 3: Health Evaluation Loop
+   │  ├── Health Probe 1: PING ──► PONG? (Pending/Unhealthy)
+   │  └── Health Probe 2: PING ──► PONG! (Status: HEALTHY)
+   ▼
+Step 4: Web Application Launch (compose-web-app)
+   │  ├── Condition met: `depends_on: { redis-db: { condition: service_healthy } }`
+   │  ├── Docker Compose releases the lock and starts `compose-web-app`
+   │  ├── Express server executes `client.connect()` using DNS name 'redis-db:6379'
+   │  └── Web server binds to internal port 3000 and maps to host port 3000
+   ▼
+System Status: ALL SERVICES RUNNING & CONNECTED
+
+Why this startup order matters:
+If the web-app container started before Redis was fully ready, the Node.js process would attempt to run await client.connect() against a closed port, throw a ECONNREFUSED exception, and crash the container.
+
+2. Runtime Data Request Flow
+When a client makes a request to your application (e.g., executing curl http://localhost:3000 or visiting the URL in a browser), traffic flows through three architectural layers:
+
+[ Client / Browser ]
+        │
+        │ 1. HTTP GET http://localhost:3000
+        ▼
+[ Host Machine Interface ] (Port 3000)
+        │
+        │ 2. Port Forwarding (-p 3000:3000)
+        ▼
+[ Docker Isolated Bridge Network: app-network ]
+        │
+        ▼
+[ Web Container: compose-web-app ]
+   │
+   ├── 3. Express router matches GET '/' route handler
+   │
+   ├── 4. Node.js issues async Redis command: await client.incr('page_visits')
+   │      │
+   │      │ (Internal Docker DNS translates 'redis-db' ──► 172.x.x.x IP)
+   │      ▼
+   └───► [ Database Container: compose-redis-db ]
+            │
+            ├── 5. Redis increments 'page_visits' key in in-memory key-value store
+            │
+            ├── 6. Redis writes data asynchronously to persistent disk volume ('redis-data')
+            │
+            └── 7. Returns updated visit count integer (e.g., 5) to Node.js
+   ┌────────┘
+   │
+   ├── 8. Node.js receives value (5) and constructs HTML string response
+   │
+   ▼
+[ Return HTTP 200 OK Response with HTML Payload to Client ]
+
+Detailed Component Responsibilities
+
+|           Component           |                                               Role in Flow                                              | Key Feature Demonstrated |
+|:-----------------------------:|:-------------------------------------------------------------------------------------------------------:|:------------------------:|
+| Host Port Mapping (3000:3000) | Accepts external ingress traffic from host network and routes it into the Docker daemon bridge network. | Networking Ingress       |
+| compose-web-app               | Processes HTTP requests, executes business logic, formats output HTML.                                  | Application Layer        |
+| Docker Embedded DNS           | Resolves redis://${REDIS_HOST}:${REDIS_PORT} (redis-db:6379) dynamically to the current container IP.   | Service Discovery        |
+| compose-redis-db              | Stores and increments the state (page_visits) in memory for ultra-fast access.                          | Caching / In-Memory DB   |
+| redis-data (Named Volume)     | Flushes data to disk so page_visits count survives even if docker compose down destroys the containers. | State Persistence        |

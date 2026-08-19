@@ -1,0 +1,33 @@
+### Architecture for Phase 3, Project 3
+We will automatically provision a production-grade cloud environment on AWS:
+
+Custom AWS Security Group: Configured with strict ingress rules (SSH port 22 and Web HTTP port 80) and unrestricted egress.
+
+AWS Key Pair: Dynamically generated SSH key registered with AWS for secure access.
+
+AWS EC2 Instance (t2.micro): Provisions an Ubuntu Linux server.
+
+User Data Bootstrap Script: Automatically installs Docker and Docker Compose upon first boot and launches a web container automatically!
+
+
+### 1. Context
+Manual cloud infrastructure provisioning via web consoles leads to configuration drift, security vulnerabilities, human error, and lack of version control. 
+
+**The Challenge:** Build an automated, declarative workflow to provision a complete cloud compute environment on AWS, complete with cryptographic SSH key pairs, least-privilege security groups, dynamic AMI discovery, and automated container bootstrapping on boot.
+
+---
+
+### 2. Decision
+* **Declarative IaC with Terraform:** Managed AWS resources using standard Terraform configuration blocks (`main.tf`, `variables.tf`, `outputs.tf`).
+* **Dynamic Key Pair Generation (`hashicorp/tls` + `hashicorp/local`):** Automatically generated 4096-bit RSA SSH keys and exported the private key file locally (`ec2-key.pem`) while registering the public key on AWS.
+* **Dynamic AMI Resolution (`data "aws_ami"`):** Programmatically queried the latest Canonical Ubuntu 22.04 LTS AMI to prevent hardcoded region-specific AMI IDs.
+* **Automated Cloud-Init Bootstrapping (`user_data`):** Executed initialization scripts on first boot to install Docker Engine and run containerized web services automatically.
+
+---
+
+### 3. Impact
+* **Zero Configuration Drift:** The entire cloud architecture is versioned, auditable, and repeatable in under 90 seconds.
+* **Infrastructure Reproducibility:** Allows instant environment teardown and reconstruction (`terraform destroy` / `terraform apply`) without state loss.
+* **Automated Provisioning:** Eliminates manual post-launch server configuration by combining Terraform with `cloud-init` Docker bootstrapping.
+
+---

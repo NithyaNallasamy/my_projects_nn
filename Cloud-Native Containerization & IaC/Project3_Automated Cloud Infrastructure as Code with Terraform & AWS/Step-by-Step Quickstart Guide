@@ -1,0 +1,21 @@
+1. Initialize Providers & Plugins
+
+terraform init
+
+2. Validate Configuration
+
+terraform fmt
+terraform validate
+
+3. Review Plan & Apply
+
+terraform plan
+terraform apply -auto-approve
+
+4. Verify Web Ingress & SSH Access
+
+# Query web endpoint
+curl http://<EC2_PUBLIC_IP>
+
+# SSH into the server using generated private key
+ssh -i ec2-key.pem ubuntu@<EC2_PUBLIC_IP>
